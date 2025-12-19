@@ -1,0 +1,278 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Pixel Bear</title>
+
+<link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/emailjs-com@3/dist/email.min.js"></script>
+
+<script>
+(function(){
+  emailjs.init("E3B4DtWnq-mAjmVH2");
+})();
+</script>
+
+<style>
+*{box-sizing:border-box}
+body{
+  margin:0;
+  font-family:'Press Start 2P',cursive;
+  background:linear-gradient(#9be7ff,#ffd6e8);
+  min-height:100vh;
+  display:flex;
+  justify-content:center;
+  align-items:center;
+}
+#game{
+  background:#fff;
+  border:6px solid #000;
+  width:95%;
+  max-width:420px;
+  min-height:560px;
+  padding:20px;
+  text-align:center;
+  box-shadow:8px 8px 0 #000;
+  position:relative;
+}
+.bear{font-size:64px;margin-bottom:10px}
+.box{
+  border:4px solid #000;
+  padding:16px;
+  background:#fffaf0;
+  box-shadow:4px 4px 0 #000;
+  min-height:120px;
+  line-height:1.8;
+}
+#answers{margin-top:16px;position:relative;min-height:120px}
+button{
+  font-family:'Press Start 2P';
+  font-size:12px;
+  padding:14px;
+  margin:6px;
+  border:3px solid #000;
+  background:#ffb6c1;
+  box-shadow:3px 3px 0 #000;
+  cursor:pointer;
+}
+button:active{
+  transform:translate(2px,2px);
+  box-shadow:1px 1px 0 #000;
+}
+#noBtn{position:absolute}
+.heart{
+  position:absolute;
+  font-size:22px;
+  animation:floatUp 2.5s linear forwards;
+  pointer-events:none;
+}
+@keyframes floatUp{
+  from{opacity:1;transform:translateY(0)}
+  to{opacity:0;transform:translateY(-120px) scale(1.4)}
+}
+#lockScreen{
+  position:fixed;
+  inset:0;
+  background:linear-gradient(#9be7ff,#ffd6e8);
+  display:flex;
+  flex-direction:column;
+  justify-content:center;
+  align-items:center;
+  z-index:9999;
+}
+#lockScreen input{
+  font-family:'Press Start 2P';
+  padding:12px;
+  border:3px solid #000;
+  width:220px;
+  text-align:center;
+  margin-bottom:10px;
+}
+.musicBtn{
+  position:absolute;
+  top:10px;
+  right:10px;
+  font-size:10px;
+}
+</style>
+</head>
+
+<body>
+
+<div id="lockScreen">
+  <div class="bear">🧸💖</div>
+  <div class="box" id="lockText">ใส่ชื่อ + รหัสลับก่อนนะ</div>
+  <input id="nameInput" placeholder="ชื่อของเธอ">
+  <input id="passwordInput" type="password" placeholder="รหัสลับ">
+  <button onclick="checkPassword()">เริ่มเกม</button>
+</div>
+
+<div id="game">
+  <button class="musicBtn" onclick="toggleMusic()">🎵</button>
+  <audio id="bgm" loop>
+    <source src="https://cdn.pixabay.com/audio/2022/03/15/audio_5c8a6b1c5a.mp3">
+  </audio>
+
+  <div class="bear" id="bear">🧸</div>
+  <div class="box" id="question"></div>
+  <div id="answers"></div>
+</div>
+
+<script>
+const PASSWORD="foryouonly";
+const SERVICE="service_zjx66ht";
+const TEMPLATE="template_i8e6p38";
+
+const bear=document.getElementById("bear");
+const qBox=document.getElementById("question");
+const aBox=document.getElementById("answers");
+const bgm=document.getElementById("bgm");
+
+let userName="";
+let step=0, shyCount=0, yesScale=1;
+let result={};
+
+const questions=[
+ {q:"ถ้าวันนี้เป็นวันหยุด เธออยากทำอะไร?",a:["นอน","ดูซีรีส์","หาอะไรกิน","มีคนไปด้วย"]},
+ {q:"คิดว่าหมีตัวนี้น่ารักมั้ย?",a:["น่ารักมาก","ก็น่ารัก","คนถามน่ารักกว่า"]},
+ {q:"ถ้ามีคนชวนออกไปทันที?",a:["อาจจะยังน้า","ขอคิดก่อน","ไปสิ","หนีแต่หนีไม่พ้น"]},
+ {q:"ชอบดูหนังแนวไหน?",a:["ตลก","โรแมนติก","สยองขวัญ","อะไรก็ได้"]},
+ {q:"ชอบกินน้ำอะไร?",a:["ชาเขียว","ชาไทย","โกโก้"]},
+ {q:"ชอบเที่ยวแบบไหน?",a:["ทะเล","ภูเขา","เดินป่า"]}
+];
+
+const sad1=["เอ๊ะ… หนีทำไม 😳","หมีแค่ถามเองนะ","ลองคิดอีกทีมั้ย 🧸"];
+const sad2=["แอบเสียใจนิดนึงนะ… 😔","หมีเตรียมป๊อปคอร์นไว้แล้ว 🍿","หรือเราคิดไปคนเดียว 😢"];
+const sad3=["ไม่เป็นไรนะ หมีเข้าใจ 💔","แต่หมีจะยังรอ 🧸","โอเค… ไม่หนีแล้ว 😞"];
+
+function checkPassword(){
+  if(passwordInput.value===PASSWORD && nameInput.value){
+    userName=nameInput.value;
+    lockScreen.style.display="none";
+    bgm.play();
+    next();
+  }else lockText.innerHTML="รหัสไม่ถูกคงไม่ใช่คนที่หมีรอ🥺";
+}
+
+function toggleMusic(){
+  bgm.paused?bgm.play():bgm.pause();
+}
+
+function typeText(t,cb){
+  qBox.innerHTML="";
+  let i=0;
+  const id=setInterval(()=>{
+    qBox.innerHTML+=t[i++];
+    if(i>=t.length){clearInterval(id);cb&&cb();}
+  },40);
+}
+
+function heart(){
+  const h=document.createElement("div");
+  h.className="heart";
+  h.textContent="💖";
+  h.style.left=Math.random()*80+10+"%";
+  h.style.bottom="20px";
+  document.body.appendChild(h);
+  setTimeout(()=>h.remove(),2500);
+}
+
+function next(){
+  aBox.innerHTML="";
+  if(step<questions.length){
+    typeText(questions[step].q,()=>{
+      questions[step].a.forEach(ans=>{
+        const b=document.createElement("button");
+        b.textContent=ans;
+        b.onclick=()=>{step++;next()};
+        aBox.appendChild(b);
+      });
+    });
+  }else finalQ();
+}
+
+function finalQ(){
+  qBox.innerHTML="";aBox.innerHTML="";
+  typeText(`${userName}… ไปดูหนังด้วยกันมั้ย?`,()=>{
+    const yes=document.createElement("button");
+    yes.textContent="ไปสิ 💕";
+    yes.onclick=()=>{heart();chooseMovie()};
+
+    const no=document.createElement("button");
+    no.textContent="ไม่ไปอ่ะ";
+    no.id="noBtn";
+
+    function run(){
+      shyCount++;
+      yesScale+=0.15;
+      yes.style.transform=`scale(${yesScale})`;
+      let t=shyCount<=2?sad1:shyCount<=4?sad2:sad3;
+      qBox.innerHTML=t[Math.floor(Math.random()*t.length)];
+      no.style.left=Math.random()*200+"px";
+      no.style.top=Math.random()*80+"px";
+    }
+    no.onmouseover=run;
+    no.ontouchstart=e=>{e.preventDefault();run()};
+
+    aBox.appendChild(yes);
+    aBox.appendChild(no);
+  });
+}
+
+function chooseMovie(){
+  typeText("อยากดูหนังแนวไหน?",()=>{
+    aBox.innerHTML="";
+    ["ตลก","โรแมนติก","สยองขวัญ","อะไรก็ได้"].forEach(m=>{
+      const b=document.createElement("button");
+      b.textContent="🎬 "+m;
+      b.onclick=()=>{result.movie=m;chooseDay()};
+      aBox.appendChild(b);
+    });
+  });
+}
+
+function chooseDay(){
+  typeText("สะดวกวันไหน?",()=>{
+    aBox.innerHTML="";
+    ["เสาร์","อาทิตย์","วันธรรมดา"].forEach(d=>{
+      const b=document.createElement("button");
+      b.textContent=d;
+      b.onclick=()=>{result.day=d;endGame()};
+      aBox.appendChild(b);
+    });
+  });
+}
+
+function endGame(){
+  qBox.innerHTML="";aBox.innerHTML="";
+  bear.textContent="🐻💖";
+
+  emailjs.send(SERVICE,TEMPLATE,{
+    name:userName,
+    movie:result.movie,
+    day:result.day
+  });
+
+  const lines=[
+    `หมีดีใจมากนะ ${userName} 💕`,
+    `🎬 ${result.movie}`,
+    `📅 ${result.day}`,
+    "หมีรออยู่จริง ๆ นะ 🧸❤️"
+  ];
+  let i=0;
+  function show(){
+    if(i<lines.length){
+      const d=document.createElement("div");
+      d.style.margin="8px 0";
+      d.textContent=lines[i++];
+      qBox.appendChild(d);
+      heart();
+      setTimeout(show,800);
+    }
+  }
+  show();
+}
+</script>
+</body>
+</html>
